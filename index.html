@@ -254,7 +254,7 @@
         <div class="header-content">
             <div class="header-title-box">
                 <!-- 사용자 제공 따릉이 로고 이미지 -->
-                <img src="P4APpD1ljLUS8O_CTEc47CqvHcObqTU2aO4yQZQmx3NBeeNuwq22I0eJZtgq61sdU9ttAmZkOzjRlc8LnnAYnw.png" alt="서울자전거 따릉이" class="logo-img">
+                <img alt="서울자전거 따릉이" class="logo-img">
             </div>
             <div class="menu-container">
                 <button class="menu-btn" onclick="toggleMenu()" aria-label="Menu">☰</button>
@@ -303,8 +303,8 @@
 <script>
     // ============================================================================
     // [설정] 발급받은 API 키를 아래 변수에 넣어주세요. (따옴표 안에 입력)
-    const API_KEY = "684e4c476662696e35385862465362"; 
     // ============================================================================
+    const API_KEY = "726648416862696e3130364266596f65"; 
 
     let allStations = []; 
     let currentSort = 'number'; 
@@ -337,6 +337,7 @@
             errorFetch: "데이터를 불러오는 데 실패했습니다.<br>API 키가 유효한지 다시 확인해주세요.",
             errorLocationEmpty: "기준 지역이나 역 이름을 입력해주세요.",
             errorLocationNotFound: "해당 이름의 대여소를 찾을 수 없습니다.",
+            errorLoading: "데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
             errorGpsNotSupported: "이 브라우저는 위치 정보를 지원하지 않습니다.",
             errorGpsPermission: "위치 권한을 허용해야 내 위치 기능을 사용할 수 있습니다.",
             gpsFinding: "현재 위치를 찾는 중...",
@@ -364,6 +365,7 @@
             errorFetch: "Failed to load data.<br>Please check if your API key is valid.",
             errorLocationEmpty: "Please enter a reference area or station name.",
             errorLocationNotFound: "Station not found with that name.",
+            errorLoading: "Data is still loading. Please try again in a moment.",
             errorGpsNotSupported: "This browser does not support geolocation.",
             errorGpsPermission: "Location permission is required to use the My Location feature.",
             gpsFinding: "Finding current location...",
@@ -482,7 +484,8 @@
         for (let i = 0; i < chunkCount; i++) {
             const startIdx = (i * 1000) + 1;
             const endIdx = (i + 1) * 1000;
-            const url = `http://openapi.seoul.go.kr:8088/${API_KEY}/json/bikeList/${startIdx}/${endIdx}/`;
+            // http 프로토콜 적용 (Mixed Content 오류 방지)
+            const url = "/api/726648416862696e3130364266596f65/json/bikeList/1/999/";
             
             const request = fetch(url)
                 .then(response => response.json())
@@ -540,6 +543,13 @@
             return false;
         }
 
+        // 데이터가 아직 로드되지 않은 상태일 경우 방어 코드
+        if (allStations.length === 0) {
+            errorDiv.innerText = t.errorLoading;
+            errorDiv.style.display = 'block';
+            return false;
+        }
+
         let found = null;
         for (const kw of keywords) {
             found = allStations.find(station => station.stationName.toLowerCase().includes(kw));
@@ -562,14 +572,23 @@
         }
     }
 
-    // 지도 보기 버튼 클릭 시
+    // 지도 보기 버튼 클릭 시 (기준 좌표 설정 기능 동기화 포함)
     function openMap() {
         const keyword = document.getElementById('locationInput').value.trim();
+        const errorDiv = document.getElementById('locationError');
+        const t = translations[currentLang];
+
         let targetLat = refLat;
         let targetLon = refLon;
         let mapName = "서울시청";
 
         if (keyword) {
+            if (allStations.length === 0) {
+                errorDiv.innerText = t.errorLoading;
+                errorDiv.style.display = 'block';
+                return;
+            }
+
             const keywords = getSearchKeywords(keyword);
             let found = null;
             for (const kw of keywords) {
@@ -580,6 +599,19 @@
                 targetLat = parseFloat(found.stationLatitude);
                 targetLon = parseFloat(found.stationLongitude);
                 mapName = found.stationName;
+
+                // 지도 보기 실행 시 기준 위치도 함께 업데이트
+                errorDiv.style.display = 'none';
+                refLat = targetLat;
+                refLon = targetLon;
+                refNameType = 'custom';
+                customRefName = found.stationName;
+                updateTotalCountText();
+                updateAndRender();
+            } else {
+                errorDiv.innerText = t.errorLocationNotFound;
+                errorDiv.style.display = 'block';
+                return;
             }
         }
         window.open(`https://map.kakao.com/link/map/${encodeURIComponent(mapName)},${targetLat},${targetLon}`, '_blank');
