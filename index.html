@@ -1,327 +1,564 @@
 <!DOCTYPE html>
+<!-- 문서의 언어를 한국어로 설정 -->
 <html lang="ko">
 <head>
+    <!-- 문자의 인코딩 방식을 UTF-8로 지정하여 한글 깨짐 방지 -->
     <meta charset="UTF-8">
+    <!-- 모바일 화면 크기에 맞게 반응형 뷰포트 설정 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 브라우저 탭에 표시되는 웹 페이지 제목 -->
     <title>실시간 따릉이 조회</title>
-    <!-- 영한 오타 자동 변환 라이브러리 (dlchs -> 이촌 변환용) -->
+    <!-- 영한 오타 자동 변환 라이브러리 (예: 'dlchs' 입력 시 '이촌'으로 자동 변환) 스크립트 로드 -->
     <script src="https://cdn.jsdelivr.net/npm/inko@1.1.0/inko.min.js"></script>
     <style>
+        /* CSS 전역 변수(Custom Properties) 정의 구역 */
         :root {
+            /* 앱의 주요 상징 색상 (초록색) */
             --primary-color: #15b676; 
+            /* 전체 배경 색상 (연한 회색) */
             --bg-color: #f4f6f8;
+            /* 기본 주 본문 텍스트 색상 (짙은 회색) */
             --text-main: #333;
+            /* 보조 안내 텍스트 색상 (중간 회색) */
             --text-sub: #666;
+            /* 경고 및 잔여 수 0개 표시용 색상 (빨간색) */
             --danger-color: #ff4d4f;
         }
+        /* body 태그 기본 스타일 정의 */
         body {
+            /* 글꼴을 Pretendard 및 시스템 기본 폰트 순서로 지정 */
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            /* 배경색을 전역 변수에 지정된 연회색으로 설정 */
             background-color: var(--bg-color);
+            /* 기본 여백 제거 */
             margin: 0;
+            /* 기본 안쪽 여백 제거 */
             padding: 0;
+            /* 전체 너비를 100%로 설정 */
             width: 100%;
         }
+        /* 앱 전체 영역을 감싸는 컨테이너 스타일 */
         .app-container {
+            /* 너비를 100%로 설정 */
             width: 100%;
+            /* 최대 너비 제한 없이 100% 채움 */
             max-width: 100%;
+            /* 배경색을 흰색으로 지정 */
             background-color: white;
+            /* 최소 높이를 화면 전체 높이(100vh)로 지정 */
             min-height: 100vh;
         }
+        /* 상단 헤더 스타일 */
         header {
+            /* 헤더 배경색을 대표 초록색으로 지정 */
             background-color: var(--primary-color);
+            /* 글자 색상을 흰색으로 지정 */
             color: white;
+            /* 안쪽 여백을 위아래 12px, 좌우 20px로 설정 */
             padding: 12px 20px;
+            /* 스크롤 시 상단에 고정되도록 sticky 설정 */
             position: sticky;
+            /* 맨 위에 고정 위치 상단값 설정 */
             top: 0;
+            /* 레이어 순서를 100으로 설정하여 다른 요소보다 위에 표시 */
             z-index: 100;
         }
+        /* 헤더 내부 콘텐츠 배치 레이아웃 */
         .header-content {
+            /* flexbox 레이아웃 적용 */
             display: flex;
+            /* 요소들을 양 끝으로 분배하여 배치 */
             justify-content: space-between;
+            /* 수직 방향 중앙 정렬 */
             align-items: center;
+            /* 자식 요소 위치 지정을 위한 상대 위치 지정 */
             position: relative;
         }
+        /* 헤더 왼쪽 로고 영역 정렬 */
         .header-title-box {
+            /* flexbox 레이아웃 적용 */
             display: flex;
+            /* 수직 방향 중앙 정렬 */
             align-items: center;
         }
+        /* 헤더 따릉이 로고 이미지 스타일 */
         .logo-img {
+            /* 이미지 높이를 32px로 지정 */
             height: 32px;
+            /* 비율에 맞게 너비 자동 계산 */
             width: auto;
+            /* 비율을 유지하며 영역 내에 맞춤 */
             object-fit: contain;
-            filter: brightness(0) invert(1); /* 초록색 배경에 맞게 흰색 로고로 변환 */
+            /* 이미지의 색상을 반전시켜 초록 배경에 맞게 흰색으로 변환 */
+            filter: brightness(0) invert(1);
         }
+        /* 햄버거 메뉴 버튼 스타일 */
         .menu-btn {
+            /* 배경 제거 */
             background: none;
+            /* 테두리 제거 */
             border: none;
+            /* 버튼 글자/아이콘 색상을 흰색으로 설정 */
             color: white;
+            /* 아이콘 크기 설정 */
             font-size: 1.6rem;
+            /* 마우스 호버 시 손가락 커서로 변경 */
             cursor: pointer;
+            /* 안쪽 여백 좌우 5px 설정 */
             padding: 0 5px;
+            /* 줄 높이를 1로 지정하여 텍스트 위치 정돈 */
             line-height: 1;
         }
+        /* 메뉴 드롭다운을 포함하는 컨테이너 */
         .menu-container {
+            /* 드롭다운의 기준점이 되도록 상대 위치 지정 */
             position: relative;
         }
+        /* 드롭다운 메뉴 스타일 */
         .dropdown-menu {
+            /* 기본 상태에서는 숨김 처리 */
             display: none;
+            /* 메뉴 컨테이너 기준으로 절대 위치 배치 */
             position: absolute;
+            /* 우측 끝에 맞춤 */
             right: 0;
+            /* 버튼 아래쪽에 위치하도록 top 설정 */
             top: 40px;
+            /* 배경색을 흰색으로 설정 */
             background: white;
+            /* 글자 색상을 메인 텍스트 색상으로 지정 */
             color: var(--text-main);
+            /* 테두리를 둥글게 모서리 처리 */
             border-radius: 8px;
+            /* 부드러운 그림자 효과 부여 */
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            /* 안쪽 여백 위아래 8px, 좌우 0 설정 */
             padding: 8px 0;
+            /* 메뉴가 다른 요소 위로 올 수 있도록 높은 z-index 지정 */
             z-index: 1000;
+            /* 최소 너비 지정 */
             min-width: 160px;
         }
+        /* 드롭다운 메뉴 활성화 시 표시되는 클래스 */
         .dropdown-menu.show {
+            /* 화면에 표시 */
             display: block;
         }
+        /* 드롭다운 메뉴의 헤더(제목) 영역 스타일 */
         .dropdown-header {
+            /* 글씨를 굵게 지정 */
             font-weight: bold;
+            /* 폰트 크기를 조금 작게 지정 */
             font-size: 0.8rem;
+            /* 안쪽 여백 설정 */
             padding: 6px 14px;
+            /* 회색 텍스트 색상 설정 */
             color: #888;
+            /* 하단에 구분선 추가 */
             border-bottom: 1px solid #eee;
+            /* 아래쪽 여백 설정 */
             margin-bottom: 4px;
         }
+        /* 드롭다운 메뉴 항목 스타일 */
         .dropdown-item {
+            /* 안쪽 여백 설정 */
             padding: 10px 14px;
+            /* 커서를 손가락 모양으로 설정 */
             cursor: pointer;
+            /* 폰트 크기 지정 */
             font-size: 0.9rem;
         }
+        /* 드롭다운 메뉴 항목 마우스 호버 시 스타일 */
         .dropdown-item:hover {
+            /* 마우스 올렸을 때 회색 배경 적용 */
             background-color: var(--bg-color);
         }
+        /* 조작 패널(검색, 버튼, 정렬 등) 영역 스타일 */
         .control-panel {
+            /* 안쪽 여백 위아래 15px, 좌우 20px 설정 */
             padding: 15px 20px;
+            /* 배경색을 흰색으로 지정 */
             background-color: white;
+            /* 하단 구분선 추가 */
             border-bottom: 1px solid #eee;
+            /* 헤더 아래 스크롤 시 상단 고정 */
             position: sticky;
+            /* 헤더 높이만큼 아래에 고정 */
             top: 56px;
+            /* z-index 설정 */
             z-index: 99;
+            /* flexbox 레이아웃 지정 */
             display: flex;
+            /* 자식 요소들을 세로 방향으로 정렬 */
             flex-direction: column;
+            /* 요소 간의 간격을 10px로 지정 */
             gap: 10px;
+            /* 아래쪽에 연한 그림자 추가 */
             box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
+        /* 기준 위치 입력창과 버튼들을 감싸는 박스 */
         .location-box {
+            /* flexbox 레이아웃 지정 */
             display: flex;
+            /* 각 요소 사이 간격 8px 설정 */
             gap: 8px;
         }
+        /* 텍스트 입력창 공통 스타일 */
         input[type="text"] {
+            /* 남아있는 공간을 채우도록 flex 비율 1 부여 */
             flex: 1;
+            /* 안쪽 여백 설정 */
             padding: 12px;
+            /* 초록색 테두리 적용 */
             border: 2px solid var(--primary-color);
+            /* 모서리를 둥글게 처리 */
             border-radius: 8px;
+            /* 폰트 크기 지정 */
             font-size: 1rem;
+            /* 패딩과 테두리가 포함되도록 너비 계산 방식 지정 */
             box-sizing: border-box;
+            /* 포커스 시 기본 외각선 제거 */
             outline: none;
         }
+        /* 위치 오류 메세지 스타일 */
         .error-msg {
+            /* 빨간색 위험 상징 색상 지정 */
             color: var(--danger-color);
+            /* 폰트 크기 지정 */
             font-size: 0.85rem;
+            /* 기본적으로 숨김 처리 */
             display: none;
+            /* 위쪽 간격을 살짝 줄임 */
             margin-top: -2px;
         }
+        /* 버튼 공통 스타일 */
         .btn {
+            /* 배경색을 주 초록색으로 지정 */
             background-color: var(--primary-color);
+            /* 글자 색상 흰색 */
             color: white;
+            /* 테두리 제거 */
             border: none;
+            /* 안쪽 여백 설정 */
             padding: 0 16px;
+            /* 테두리 모서리 둥글게 */
             border-radius: 8px;
+            /* 굵은 글씨체 설정 */
             font-weight: bold;
+            /* 마우스 손가락 모양 커서 */
             cursor: pointer;
+            /* 폰트 크기 지정 */
             font-size: 0.95rem;
+            /* 줄바꿈을 방지 */
             white-space: nowrap;
         }
+        /* 보조 버튼(내 위치 버튼 등) 스타일 */
         .btn-secondary {
+            /* 어두운 회색 배경 적용 */
             background-color: #555;
         }
+        /* 정렬 드롭다운과 체크박스가 배치된 행 스타일 */
         .filter-row {
+            /* flexbox 레이아웃 지정 */
             display: flex;
+            /* 양 끝으로 수평 분배 */
             justify-content: space-between;
+            /* 세로 방향 중앙 정렬 */
             align-items: center;
+            /* 요소 간 간격 10px 지정 */
             gap: 10px;
         }
+        /* 셀렉트 드롭다운 스타일 */
         select {
+            /* 남은 여백을 차지하도록 설정 */
             flex: 1;
+            /* 안쪽 여백 지정 */
             padding: 12px;
+            /* 연한 회색 테두리 */
             border: 1px solid #ddd;
+            /* 모서리 둥글게 */
             border-radius: 8px;
+            /* 폰트 크기 지정 */
             font-size: 0.95rem;
+            /* 배경색 흰색 설정 */
             background-color: white;
+            /* 포커스 외각선 제거 */
             outline: none;
+            /* 마우스 커서 설정 */
             cursor: pointer;
         }
+        /* 체크박스 라벨 스타일 */
         .checkbox-label {
+            /* flexbox 레이아웃 지정 */
             display: flex;
+            /* 세로 방향 중앙 정렬 */
             align-items: center;
+            /* 체크박스와 글자 간 간격 6px 지정 */
             gap: 6px;
+            /* 폰트 크기 지정 */
             font-size: 0.9rem;
+            /* 텍스트 메인 색상 */
             color: var(--text-main);
+            /* 손가락 커서 지정 */
             cursor: pointer;
+            /* 줄바꿈 방지 */
             white-space: nowrap;
+            /* 드래그에 의한 텍스트 선택 방지 */
             user-select: none;
         }
+        /* 체크박스 자체 아이콘 스타일 */
         .checkbox-label input {
+            /* 손가락 커서 지정 */
             cursor: pointer;
+            /* 너비 설정 */
             width: 18px;
+            /* 높이 설정 */
             height: 18px;
+            /* 체크 시 강조되는 포인트 색상을 초록색으로 지정 */
             accent-color: var(--primary-color);
         }
+        /* 상태 알림 메시지(로딩중, 결과 없음 등) 영역 */
         .status-message {
+            /* 텍스트 중앙 정렬 */
             text-align: center;
+            /* 위아래 여백 지정 */
             padding: 40px 20px;
+            /* 보조 회색 글자 색상 지정 */
             color: var(--text-sub);
+            /* 줄 간격 설정 */
             line-height: 1.5;
         }
+        /* 대여소 목록을 담는 ul 태그 스타일 */
         .bike-list {
+            /* li 태그의 기본 불릿 기호 제거 */
             list-style: none;
+            /* 여백 제거 */
             padding: 0;
+            /* 여백 제거 */
             margin: 0;
         }
+        /* 개별 대여소 아이템(li) 스타일 */
         .bike-item {
+            /* 안쪽 여백 20px 부여 */
             padding: 20px;
+            /* 아래쪽에 구분선 추가 */
             border-bottom: 1px solid #f0f0f0;
+            /* flexbox 레이아웃 지정 */
             display: flex;
+            /* 정보 영역과 자전거 개수 영역을 양 끝으로 배치 */
             justify-content: space-between;
+            /* 세로 방향 중앙 정렬 */
             align-items: center;
         }
+        /* 대여소 정보(이름, 거치대 수, 거리) 영역 */
         .station-info {
+            /* 남아있는 가로 공간을 최대한 확장 */
             flex-grow: 1;
+            /* 우측 대여 가능 수 박스와의 간격 유지를 위한 안쪽 여백 */
             padding-right: 15px;
         }
+        /* 대여소 이름 텍스트 스타일 */
         .station-name {
+            /* 폰트 크기 조절 */
             font-size: 1.1rem;
+            /* 글씨 굵게 */
             font-weight: bold;
+            /* 아래 보조 정보와의 여백 지정 */
             margin-bottom: 6px;
+            /* 메인 텍스트 색상 지정 */
             color: var(--text-main);
         }
+        /* 대여소 부가 메타 정보(거치대 수, 거리) 스타일 */
         .station-meta {
+            /* 폰트 크기를 다소 작게 설정 */
             font-size: 0.85rem;
+            /* 회색 보조 텍스트 색상 설정 */
             color: var(--text-sub);
+            /* flexbox 적용 */
             display: flex;
+            /* 각 메타 정보 사이 간격 12px 설정 */
             gap: 12px;
         }
+        /* 오른쪽 자전거 대여 가능 수 표시 박스 */
         .bike-count-box {
+            /* 텍스트 중앙 정렬 */
             text-align: center;
+            /* 연회색 배경 지정 */
             background-color: var(--bg-color);
+            /* 안쪽 여백 부여 */
             padding: 10px 15px;
+            /* 모서리를 둥글게 처리 */
             border-radius: 12px;
+            /* 최소 너비 지정 */
             min-width: 70px;
         }
+        /* 자전거 대여 가능 레이블 텍스트 */
         .count-label {
+            /* 작은 폰트 크기 지정 */
             font-size: 0.75rem;
+            /* 회색 지정 */
             color: #777;
+            /* 아래 숫자와의 간격 지정 */
             margin-bottom: 4px;
         }
+        /* 자전거 대여 가능 잔여 수 숫자 텍스트 */
         .count-number {
+            /* 큰 폰트 크기 설정 */
             font-size: 1.5rem;
+            /* 굵게 지정 */
             font-weight: bold;
+            /* 기본적으로 초록색 상징 색 적용 */
             color: var(--primary-color);
         }
+        /* 잔여 수가 0개일 때의 숫자에 적용할 스타일 */
         .empty .count-number {
+            /* 빨간색 위험 상징 색상으로 변경 */
             color: var(--danger-color); 
         }
+        /* 로딩 스피너 애니메이션 요소 스타일 */
         .spinner {
+            /* 인라인 블록 타입 설정 */
             display: inline-block;
+            /* 가로 크기 지정 */
             width: 40px;
+            /* 세로 크기 지정 */
             height: 40px;
+            /* 전체 원형 테두리를 연한 초록색으로 설정 */
             border: 4px solid rgba(21, 182, 118, 0.3);
+            /* 동그란 형태로 변경 */
             border-radius: 50%;
+            /* 위쪽 테두리만 진한 초록색으로 설정하여 회전 효과 연출 */
             border-top-color: var(--primary-color);
+            /* spin 애니메이션을 1초 동안 무한 반복 실행 */
             animation: spin 1s ease-in-out infinite;
+            /* 아래쪽에 여백 추가 */
             margin-bottom: 15px;
         }
+        /* 스피너 회전 키프레임 애니메이션 정의 */
         @keyframes spin {
+            /* 360도 회전 시킴 */
             to { transform: rotate(360deg); }
         }
+        /* 총 대여소 개수 표시 텍스트 스타일 */
         .total-count {
+            /* 우측 정렬 */
             text-align: right;
+            /* 작은 폰트 크기 지정 */
             font-size: 0.85rem;
+            /* 회색 설정 */
             color: #666;
+            /* 위쪽 간격 부여 */
             margin-top: 5px;
         }
     </style>
 </head>
 <body>
 
+<!-- 전체 애플리케이션 화면 영역 시작 -->
 <div class="app-container">
+    <!-- 상단 헤더 영역 -->
     <header>
         <div class="header-content">
+            <!-- 로고 박스 -->
             <div class="header-title-box">
-                <!-- 사용자 제공 따릉이 로고 이미지 -->
-                <img alt="서울자전거 따릉이" class="logo-img">
+                <!-- 사용자 제공 따릉이 로고 이미지 표시 -->
+                <img src="P4APpD1ljLUS8O_CTEc47CqvHcObqTU2aO4yQZQmx3NBeeNuwq22I0eJZtgq61sdU9ttAmZkOzjRlc8LnnAYnw.png" alt="서울자전거 따릉이" class="logo-img">
             </div>
+            <!-- 우측 상단 드롭다운 메뉴 컨테이너 -->
             <div class="menu-container">
+                <!-- 햄버거 메뉴 버튼 (클릭 시 toggleMenu 함수 실행) -->
                 <button class="menu-btn" onclick="toggleMenu()" aria-label="Menu">☰</button>
+                <!-- 클릭 시 열리는 드롭다운 메뉴 목록 -->
                 <div id="dropdownMenu" class="dropdown-menu">
+                    <!-- 드롭다운 헤더 제목 -->
                     <div class="dropdown-header" id="langMenuTitle">언어 설정</div>
+                    <!-- 한국어 변경 버튼 -->
                     <div class="dropdown-item" onclick="setLanguage('ko')">한국어</div>
+                    <!-- 영어 변경 버튼 -->
                     <div class="dropdown-item" onclick="setLanguage('en')">English</div>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- 검색 및 필터 옵션이 모여있는 상단 조작 패널 -->
     <div class="control-panel">
+        <!-- 기준 위치 설정 박스 -->
         <div class="location-box">
+            <!-- 기준 지역/지하철역 이름 입력창 -->
             <input type="text" id="locationInput" placeholder="기준 지역/역 입력 (예: 망원역, dlchs)">
+            <!-- 지도 보기 버튼 (openMap 함수 호출) -->
             <button class="btn" onclick="openMap()" id="mapBtnText">지도 보기</button>
+            <!-- GPS 내 위치 설정 버튼 (setGPSLocation 함수 호출) -->
             <button class="btn btn-secondary" onclick="setGPSLocation()" id="gpsBtnText">내 위치</button>
         </div>
+        <!-- 위치 검색 실패/에러 발생 시 표시할 에러 메시지 영역 -->
         <div id="locationError" class="error-msg"></div>
+        <!-- 대여소 이름 및 번호 실시간 검색 필터 입력창 -->
         <input type="text" id="searchInput" placeholder="대여소 이름 또는 번호 검색...">
         
+        <!-- 정렬 옵션 및 필터 체크박스 행 -->
         <div class="filter-row">
+            <!-- 정렬 방식 선택 드롭다운 (옵션 변경 시 changeSort 함수 호출) -->
             <select id="sortSelect" onchange="changeSort(this.value)">
                 <option value="number">번호순</option>
                 <option value="available">대여가능순 (3km 이내)</option>
                 <option value="distance">거리순 (3km 이내)</option>
             </select>
+            <!-- 대여 가능 수 0개 대여소 숨기기 옵션 체크박스 -->
             <label class="checkbox-label">
+                <!-- 체크 여부 변경 시 updateAndRender 함수 호출 -->
                 <input type="checkbox" id="hideEmpty" onchange="updateAndRender()"> <span id="hideEmptyText">대여 가능 0개 제외</span>
             </label>
         </div>
 
+        <!-- 기준 위치 정보 및 전체 대여소 개수를 출력하는 텍스트 영역 -->
         <div id="totalCount" class="total-count"></div>
     </div>
 
+    <!-- 로딩 중 화면 또는 메시지를 안내하는 영역 -->
     <div id="statusMessage" class="status-message">
+        <!-- 회전하는 스피너 애니메이션 요소 -->
         <div class="spinner"></div>
+        <!-- 상태 안내 문구 -->
         <p id="loadingText">전체 따릉이 대여소 정보를<br>불러오고 취합하는 중입니다...</p>
     </div>
 
+    <!-- 따릉이 대여소 목록이 동적으로 생성되어 들어갈 ul 태그 -->
     <ul id="bikeList" class="bike-list">
         <!-- 자전거 대여소 리스트 렌더링 영역 -->
     </ul>
 </div>
 
+<!-- 스크립트 작성 구역 -->
 <script>
     // ============================================================================
-    // [설정] 발급받은 API 키를 아래 변수에 넣어주세요. (따옴표 안에 입력)
+    // [설정] 발급받은 서울시 오픈 API 키 저장 변수
+    const API_KEY = "684e4c476662696e35385862465362"; 
     // ============================================================================
-    const API_KEY = "726648416862696e3130364266596f65"; 
 
+    // API에서 가져온 전체 따릉이 대여소 데이터들을 담아둘 배열
     let allStations = []; 
+    // 현재 선택된 정렬 방식 (기본값: 'number' - 번호순)
     let currentSort = 'number'; 
-    let currentLang = 'ko'; // 기본 언어: 한국어
+    // 현재 적용된 앱의 언어 코드 (기본값: 'ko' - 한국어)
+    let currentLang = 'ko'; 
     
-    // Inko 객체 초기화 (영한 오타 자동 변환용)
+    // 영한 오타 자동 변환을 위한 Inko 라이브러리 인스턴스 저장 변수
     let inko = null;
     try {
+        // Inko 라이브러리가 성공적으로 로드되었는지 확인 후 객체 생성
         if (typeof Inko !== 'undefined') {
             inko = new Inko();
         }
     } catch (e) {
+        // 라이브러리 초기화 실패 시 콘솔 경고 출력
         console.warn("Inko initialization failed");
     }
 
-    // 다국어 텍스트 딕셔너리
+    // 언어별 지원 문구 딕셔너리 객체 (다국어 지원용)
     const translations = {
+        // 한국어 텍스트 정의
         ko: {
             langMenuTitle: "언어 설정",
             locationPlaceholder: "기준 지역/역 입력 (예: 망원역, dlchs)",
@@ -337,7 +574,6 @@
             errorFetch: "데이터를 불러오는 데 실패했습니다.<br>API 키가 유효한지 다시 확인해주세요.",
             errorLocationEmpty: "기준 지역이나 역 이름을 입력해주세요.",
             errorLocationNotFound: "해당 이름의 대여소를 찾을 수 없습니다.",
-            errorLoading: "데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
             errorGpsNotSupported: "이 브라우저는 위치 정보를 지원하지 않습니다.",
             errorGpsPermission: "위치 권한을 허용해야 내 위치 기능을 사용할 수 있습니다.",
             gpsFinding: "현재 위치를 찾는 중...",
@@ -350,6 +586,7 @@
             refPrefix: "기준: ",
             totalCountText: (count) => `총 ${count.toLocaleString()}개 대여소`
         },
+        // 영어 텍스트 정의
         en: {
             langMenuTitle: "Language Settings",
             locationPlaceholder: "Enter station/area (e.g. Mangwon, dlchs)",
@@ -365,7 +602,6 @@
             errorFetch: "Failed to load data.<br>Please check if your API key is valid.",
             errorLocationEmpty: "Please enter a reference area or station name.",
             errorLocationNotFound: "Station not found with that name.",
-            errorLoading: "Data is still loading. Please try again in a moment.",
             errorGpsNotSupported: "This browser does not support geolocation.",
             errorGpsPermission: "Location permission is required to use the My Location feature.",
             gpsFinding: "Finding current location...",
@@ -380,343 +616,442 @@
         }
     };
 
-    // 기준 좌표 (기본값: 서울시청 좌표)
+    // 거리를 계산할 현재 기준 좌표 변수 (기본 좌표: 서울시청 위도)
     let refLat = 37.5665;
+    // 거리를 계산할 현재 기준 좌표 변수 (기본 좌표: 서울시청 경도)
     let refLon = 126.9780;
+    // 현재 적용된 기준 위치의 타입 ('default', 'gps', 'custom')
     let refNameType = 'default'; 
+    // 사용자가 직접 입력한 기준 위치 대여소 이름 저장 변수
     let customRefName = '';
 
-    // 메뉴 토글 함수
+    // 상단 우측 햄버거 메뉴를 열고 닫는 함수
     function toggleMenu() {
+        // 드롭다운 메뉴 DOM 요소 가져오기
         const menu = document.getElementById('dropdownMenu');
+        // 'show' 클래스를 토글(추가/제거)하여 메뉴 표시 전환
         menu.classList.toggle('show');
     }
 
-    // 메뉴 바깥 클릭 시 닫기
+    // 메뉴 바깥 화면 아무 곳이나 클릭했을 때 드롭다운 메뉴를 자동으로 닫는 이벤트 리스너
     window.addEventListener('click', function(e) {
+        // 클릭된 요소가 메뉴 컨테이너 내부가 아닌 경우 실행
         if (!e.target.closest('.menu-container')) {
+            // 메뉴 요소 가져오기
             const menu = document.getElementById('dropdownMenu');
+            // 메뉴가 켜져 있는 상태('show' 클래스 보유)라면
             if (menu && menu.classList.contains('show')) {
+                // 'show' 클래스를 제거하여 드롭다운 닫기
                 menu.classList.remove('show');
             }
         }
     });
 
-    // 언어 변경 함수
+    // 선택한 언어로 화면 전체 UI 텍스트를 즉시 변경하는 함수
     function setLanguage(lang) {
+        // 현재 언어 변수를 선택된 언어 코드로 업데이트
         currentLang = lang;
+        // 해당 언어의 텍스트 사전 객체 가져오기
         const t = translations[currentLang];
 
+        // 각 DOM 요소의 텍스트 및 속성값 변경
         document.getElementById('langMenuTitle').innerText = t.langMenuTitle;
         document.getElementById('locationInput').placeholder = t.locationPlaceholder;
         document.getElementById('mapBtnText').innerText = t.mapBtn;
         document.getElementById('gpsBtnText').innerText = t.gpsBtn;
         document.getElementById('searchInput').placeholder = t.searchPlaceholder;
         
+        // 정렬 선택 셀렉트 박스의 옵션 텍스트들 다국어 변경
         const sortSelect = document.getElementById('sortSelect');
         sortSelect.options[0].text = t.sortNumber;
         sortSelect.options[1].text = t.sortAvailable;
         sortSelect.options[2].text = t.sortDistance;
 
+        // 체크박스 라벨 및 로딩 메시지 다국어 변경
         document.getElementById('hideEmptyText').innerText = t.hideEmptyText;
         document.getElementById('loadingText').innerHTML = t.loadingText;
 
+        // 기준 위치 상단 안내 문구 재계산 및 갱신
         updateTotalCountText();
+        // 언어가 변경되었으므로 화면 목록 재리렌더링
         updateAndRender();
+        // 메뉴창 닫기
         toggleMenu();
     }
 
-    // 총 대여소 및 기준 이름 텍스트 갱신
+    // 현재 설정된 기준 위치의 이름과 가져온 대여소 수 안내 문구를 상단에 갱신하는 함수
     function updateTotalCountText() {
+        // 현재 언어 사전 객체 참조
         const t = translations[currentLang];
+        // 표기할 기준 위치 이름 저장 변수
         let displayRefName = '';
+        
+        // 기준 위치 타입에 따라 문구 분기 처리
         if (refNameType === 'default') {
-            displayRefName = t.refDefault;
+            displayRefName = t.refDefault; // "서울시청 기준"
         } else if (refNameType === 'gps') {
-            displayRefName = t.refGps;
+            displayRefName = t.refGps; // "현재 내 위치 기준"
         } else {
-            displayRefName = `${t.refPrefix}${customRefName}`;
+            displayRefName = `${t.refPrefix}${customRefName}`; // "기준: [사용자 대여소명]"
         }
 
+        // 문구를 출력할 DOM 요소 지정
         const totalCountDiv = document.getElementById('totalCount');
+        // 대여소 데이터가 성공적으로 존재하면 텍스트 업데이트
         if (allStations.length > 0) {
             totalCountDiv.innerText = `${displayRefName} / ${t.totalCountText(allStations.length)}`;
         }
     }
 
-    // 영타 오류 자동 변환을 포함한 키워드 생성 (예: dlchs -> 이촌)
+    // 사용자가 입력한 문자열로부터 (필요 시 영한 오타 변환까지 수행하여) 검색 키워드 목록을 배열로 반환하는 함수
     function getSearchKeywords(inputVal) {
+        // 입력 문자열 앞뒤 공백 제거
         const trimmed = inputVal.trim();
+        // 입력값 없는 경우 빈 배열 반환
         if (!trimmed) return [];
+        // 기본 검색어(소문자 변환)를 배열에 추가
         let keywords = [trimmed.toLowerCase()];
         
+        // Inko 라이브러리가 준비되어 있다면 오타 변환 시도
         if (inko) {
             try {
+                // 영타를 한글 글자로 변환 (예: 'dlchs' -> '이촌')
                 const converted = inko.en2ko(trimmed);
+                // 성공적으로 한글로 변환되었고 기존 입력과 다르다면 검색 키워드 목록에 추가
                 if (converted && converted !== trimmed) {
                     keywords.push(converted.toLowerCase());
                 }
             } catch (e) {
-                // 무시
+                // 변환 오류 발생 시 예외 무시
             }
         }
+        // 완성된 키워드 배열 반환
         return keywords;
     }
 
+    // 특정 대여소 이름이 생성된 검색 키워드들 중 하나라도 포함하는지 확인하는 함수
     function matchesKeyword(stationName, keywords) {
+        // 키워드가 없으면 항상 참(통과) 반환
         if (keywords.length === 0) return true;
+        // 대여소 이름을 소문자로 변환하여 저장
         const lowerName = stationName.toLowerCase();
+        // 키워드 중 하나라도 대여소 이름에 포함되면 true 반환
         return keywords.some(kw => lowerName.includes(kw));
     }
 
+    // 서울시 오픈 API로부터 실시간 따릉이 데이터를 가져오는 핵심 비동기 함수
     async function fetchBikeData() {
+        // 로딩 및 상태 메시지를 출력할 요소 참조
         const statusMessage = document.getElementById('statusMessage');
+        // 현재 언어에 맞는 텍스트 객체 가져오기
         const t = translations[currentLang];
         
+        // API 키 미입력 시 에러 메시지 출력 후 종료
         if (API_KEY === "여기에_API_키를_입력하세요" || API_KEY.trim() === "") {
             statusMessage.innerHTML = `<p style='color:red;'>${t.errorApi}</p>`;
             return;
         }
 
+        // 전체 데이터(약 3,000~4,000개)를 1,000개씩 청크(조각) 단위로 분할 요청할 개수 (4개)
         const chunkCount = 4; 
+        // 4개의 비동기 fetch 요청 Promise들을 담아둘 배열
         const fetchPromises = [];
 
+        // 1,000개 단위로 나누어 API에 보낼 요청들을 생성
         for (let i = 0; i < chunkCount; i++) {
+            // 가져올 시작 인덱스 (1, 1001, 2001, 3001)
             const startIdx = (i * 1000) + 1;
+            // 가져올 끝 인덱스 (1000, 2000, 3000, 4000)
             const endIdx = (i + 1) * 1000;
-            // http 프로토콜 적용 (Mixed Content 오류 방지)
-            const url = "/api/726648416862696e3130364266596f65/json/bikeList/1/999/";
+            // 서울시 오픈 API 요청 URL 조합
+            const url = `http://openapi.seoul.go.kr:8088/${API_KEY}/json/bikeList/${startIdx}/${endIdx}/`;
             
+            // 비동기 fetch 요청 생성 및 JSON 응답 파싱
             const request = fetch(url)
                 .then(response => response.json())
                 .catch(error => {
+                    // 특정 구간 수신 실패 시 콘솔에 로그 남기고 null 반환
                     console.error(`${startIdx}~${endIdx} 구간 로드 실패:`, error);
                     return null;
                 });
+            // 생성된 프로미스 객체를 배열에 담음
             fetchPromises.push(request);
         }
 
         try {
+            // 4개의 API 요청을 병렬로 동시에 실행하여 결과를 기다림
             const results = await Promise.all(fetchPromises);
             
+            // 각 청크 응답 결과들을 하나로 순회하면서 수집
             results.forEach(data => {
+                // 데이터 형태가 올바르게 들어왔는지 검증
                 if (data && data.rentBikeStatus && data.rentBikeStatus.row) {
+                    // 수신된 대여소 배열을전역 allStations 배열에 병합
                     allStations = allStations.concat(data.rentBikeStatus.row);
                 }
             });
 
+            // 데이터를 성공적으로 가져왔을 때의 처리
             if (allStations.length > 0) {
+                // 로딩 메시지 박스 숨김 처리
                 statusMessage.style.display = 'none'; 
+                // 총 개수 및 기준 안내글 업데이트
                 updateTotalCountText();
+                // 데이터 정렬 및 리스트 화면 렌더링 시작
                 updateAndRender(); 
             } else {
+                // 데이터가 비어있으면 예외 발생 시킴
                 throw new Error("데이터를 가져오지 못했습니다.");
             }
         } catch (error) {
+            // 데이터 수신 실패 시 콘솔 출력 및 에러 메시지 사용자 화면 안내
             console.error("최종 데이터 병합 실패:", error);
             statusMessage.innerHTML = `<p style="color:red;">${t.errorFetch}</p>`;
         }
     }
 
-    // 거리 계산 함수 (Haversine Formula)
+    // 두 지점의 위도/경도를 기반으로 실제 구면 거리를 계산하는 하버사인(Haversine) 공식을 적용한 함수
     function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // 지구 반지름 (km)
+        // 지구의 평균 반지름 (km)
+        const R = 6371; 
+        // 두 지점의 위도 차이를 라디안 단위로 변환
         const dLat = (lat2 - lat1) * Math.PI / 180;
+        // 두 지점의 경도 차이를 라디안 단위로 변환
         const dLon = (lon2 - lon1) * Math.PI / 180;
+        // 삼각함수를 통한 중간 거리 비율 계산
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                   Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                   Math.sin(dLon/2) * Math.sin(dLon/2);
+        // 호도법 각도 계산
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; // km 단위
+        // 최종 최단 거리(km 단위) 반환
+        return R * c; 
     }
 
-    // 사용자가 입력한 지역/역 이름으로 기준점 설정 (오타 자동 변환 지원)
+    // 기준 지역/역 입력창에 적힌 키워드를 바탕으로 해당 대여소를 찾아 기준점으로 설정하는 함수
     function searchLocationQuiet() {
+        // 기준 위치 입력 엘리먼트 값 가져오기
         const inputVal = document.getElementById('locationInput').value;
+        // 영한 오타 변환을 포함한 검색 키워드 추출
         const keywords = getSearchKeywords(inputVal);
+        // 에러 표시 엘리먼트 참조
         const errorDiv = document.getElementById('locationError');
+        // 현재 언어 사전
         const t = translations[currentLang];
 
+        // 입력값이 비어있는 경우
         if (keywords.length === 0 || !inputVal.trim()) {
+            // 입력 요청 에러 문구 표시
             errorDiv.innerText = t.errorLocationEmpty;
             errorDiv.style.display = 'block';
             return false;
         }
 
-        // 데이터가 아직 로드되지 않은 상태일 경우 방어 코드
-        if (allStations.length === 0) {
-            errorDiv.innerText = t.errorLoading;
-            errorDiv.style.display = 'block';
-            return false;
-        }
-
+        // 전체 대여소 중 키워드가 포함된 첫 번째 대여소를 탐색
         let found = null;
         for (const kw of keywords) {
             found = allStations.find(station => station.stationName.toLowerCase().includes(kw));
-            if (found) break;
+            if (found) break; // 일치하는 대여소를 찾으면 반복 중단
         }
 
+        // 일치하는 대여소를 찾은 경우
         if (found) {
+            // 에러 문구 숨김
             errorDiv.style.display = 'none'; 
+            // 발견된 대여소의 위도를 새로운 기준 위도로 업데이트
             refLat = parseFloat(found.stationLatitude);
+            // 발견된 대여소의 경도를 새로운 기준 경도로 업데이트
             refLon = parseFloat(found.stationLongitude);
+            // 기준 위치 타입을 'custom'으로 설정
             refNameType = 'custom';
+            // 사용자 지정 기준 위치 대여소명 저장
             customRefName = found.stationName;
+            // 상단 기준 문구 갱신
             updateTotalCountText();
+            // 새로운 기준점에서의 거리 재계산 및 리스트 재정렬/렌더링
             updateAndRender();
             return true;
         } else {
+            // 대여소를 찾을 수 없는 경우 에러 메시지 출력
             errorDiv.innerText = t.errorLocationNotFound;
             errorDiv.style.display = 'block';
             return false;
         }
     }
 
-    // 지도 보기 버튼 클릭 시 (기준 좌표 설정 기능 동기화 포함)
+    // 지도 보기 버튼 클릭 시 카카오맵 웹페이지로 이동시키는 함수
     function openMap() {
+        // 입력창의 키워드 값 가져오기
         const keyword = document.getElementById('locationInput').value.trim();
-        const errorDiv = document.getElementById('locationError');
-        const t = translations[currentLang];
-
+        // 타겟 위도 기본값 지정
         let targetLat = refLat;
+        // 타겟 경도 기본값 지정
         let targetLon = refLon;
+        // 카카오맵 핀 이름 기본값 지정
         let mapName = "서울시청";
 
+        // 입력 키워드가 존재한다면 해당 대여소의 정확한 좌표를 탐색
         if (keyword) {
-            if (allStations.length === 0) {
-                errorDiv.innerText = t.errorLoading;
-                errorDiv.style.display = 'block';
-                return;
-            }
-
             const keywords = getSearchKeywords(keyword);
             let found = null;
             for (const kw of keywords) {
                 found = allStations.find(station => station.stationName.toLowerCase().includes(kw));
                 if (found) break;
             }
+            // 찾았으면 해당 대여소의 좌표 및 이름으로 변경
             if (found) {
                 targetLat = parseFloat(found.stationLatitude);
                 targetLon = parseFloat(found.stationLongitude);
                 mapName = found.stationName;
-
-                // 지도 보기 실행 시 기준 위치도 함께 업데이트
-                errorDiv.style.display = 'none';
-                refLat = targetLat;
-                refLon = targetLon;
-                refNameType = 'custom';
-                customRefName = found.stationName;
-                updateTotalCountText();
-                updateAndRender();
-            } else {
-                errorDiv.innerText = t.errorLocationNotFound;
-                errorDiv.style.display = 'block';
-                return;
             }
         }
+        // 카카오맵 외부 링크 URL을 새 창에서 열기
         window.open(`https://map.kakao.com/link/map/${encodeURIComponent(mapName)},${targetLat},${targetLon}`, '_blank');
     }
 
-    // GPS 위치 기반 기준점 설정
+    // 브라우저의 Geolocation API를 사용하여 스마트폰/컴퓨터의 현재 GPS 위치를 기준점으로 지정하는 함수
     function setGPSLocation() {
+        // 에러 표시 엘리먼트 참조
         const errorDiv = document.getElementById('locationError');
+        // 현재 언어 사전
         const t = translations[currentLang];
+        
+        // 브라우저가 위치 서비스를 지원하지 않는 경우
         if (!navigator.geolocation) {
             errorDiv.innerText = t.errorGpsNotSupported;
             errorDiv.style.display = 'block';
             return;
         }
 
+        // 기존 에러창 숨김
         errorDiv.style.display = 'none';
+        // 상단에 위치 검색 중 메시지 출력
         document.getElementById('totalCount').innerText = t.gpsFinding;
+        
+        // 현재 GPS 위치 정보 요청
         navigator.geolocation.getCurrentPosition(
+            // GPS 위치 조회 성공 시 실행되는 콜백 함수
             (position) => {
+                // 현재 위도를 기준 위도로 설정
                 refLat = position.coords.latitude;
+                // 현재 경도를 기준 경도로 설정
                 refLon = position.coords.longitude;
+                // 기준 위치 타입을 'gps'로 설정
                 refNameType = 'gps';
+                // 안내 텍스트 갱신
                 updateTotalCountText();
+                // GPS 좌표 기준으로 거리 재계산 및 화면 렌더링
                 updateAndRender();
             },
+            // GPS 위치 권한 거부 또는 실패 시 실행되는 콜백 함수
             (error) => {
+                // 권한 오류 안내 문구 표시
                 errorDiv.innerText = t.errorGpsPermission;
                 errorDiv.style.display = 'block';
+                // 상단 문구 복구
                 updateTotalCountText();
             }
         );
     }
 
-    // 드롭다운 정렬 변경
+    // 정렬 드롭다운 선택값이 변경되었을 때 실행되는 함수
     function changeSort(sortType) {
+        // 선택된 정렬 타입('number', 'available', 'distance')으로 상태 변경
         currentSort = sortType;
+        // 리스트 변경 사항 적용을 위한 재렌더링
         updateAndRender();
     }
 
-    // 데이터 가공 및 렌더링 총괄
+    // 검색어, 대여 가능 0개 제외, 정렬 등의 모든 조건을 조합하여 목록을 가공하고 그려주는 핵심 총괄 함수
     function updateAndRender() {
+        // 대여소 이름/번호 검색창 입력값
         const searchInputVal = document.getElementById('searchInput').value;
+        // 영한 오타 변환 키워드 목록 생성
         const searchKeywords = getSearchKeywords(searchInputVal);
+        // '대여 가능 0개 제외' 체크박스의 체크 여부(true/false)
         const hideEmptyChecked = document.getElementById('hideEmpty').checked;
 
-        // 1. 검색어 필터링 (오타 자동 변환 키워드 포함 검사)
+        // 1단계: 검색어 키워드 필터링 적용
         let targetStations = allStations.filter(station => 
             matchesKeyword(station.stationName, searchKeywords)
         );
 
-        // 2. 대여 가능 0개 제외 체크박스 필터링
+        // 2단계: '대여 가능 0개 제외' 체크 시 0개인 대여소 제외 처리
         if (hideEmptyChecked) {
             targetStations = targetStations.filter(station => 
                 parseInt(station.parkingBikeTotCnt, 10) > 0
             );
         }
 
-        // 3. 거리 계산 속성 추가
+        // 3단계: 현재 설정된 기준 위치로부터의 거리를 모든 대여소 객체에 계산하여 속성으로 추가
         targetStations = targetStations.map(station => {
             const dist = calculateDistance(refLat, refLon, parseFloat(station.stationLatitude), parseFloat(station.stationLongitude));
+            // 기존 대여소 데이터에 distance 키-값 추가하여 반환
             return { ...station, distance: dist };
         });
 
-        // 4. 정렬 및 3km 필터링 적용
+        // 4단계: 선택된 정렬 방식 및 거리 제한 조건 적용
         if (currentSort === 'number') {
+            // 대여소 번호순 정렬 (이름 앞부분의 숫자를 추출하여 오름차순 정렬)
             targetStations.sort((a, b) => {
                 const numA = parseInt(a.stationName, 10) || 0;
                 const numB = parseInt(b.stationName, 10) || 0;
                 return numA - numB;
             });
         } else if (currentSort === 'available') {
+            // 대여가능순 선택 시 사용자 편의를 위해 주변 3.0km 이내 대여소만 1차 필터링
             targetStations = targetStations.filter(s => s.distance <= 3.0);
+            // 자전거 대여 가능 수가 많은 순서대로 내림차순 정렬
             targetStations.sort((a, b) => parseInt(b.parkingBikeTotCnt, 10) - parseInt(a.parkingBikeTotCnt, 10));
         } else if (currentSort === 'distance') {
+            // 거리순 선택 시 주변 3.0km 이내 대여소만 1차 필터링
             targetStations = targetStations.filter(s => s.distance <= 3.0);
+            // 가깝게 위치한 거리가 짧은 순서대로 오름차순 정렬
             targetStations.sort((a, b) => a.distance - b.distance);
         }
 
+        // 가공이 완료된 최종 대여소 목록 배열을 DOM에 렌더링
         renderList(targetStations);
     }
 
-    // 화면 리스트 그리기
+    // 가공 완료된 대여소 데이터를 전달받아 실제 HTML DOM 요소(li)로 만들어 화면에 노출시키는 함수
     function renderList(stations) {
+        // 목록이 출력될 ul 태그 요소 가져오기
         const listContainer = document.getElementById('bikeList');
+        // 기존에 그려져 있던 목록 초기화
         listContainer.innerHTML = ''; 
+        // 현재 언어 사전 가져오기
         const t = translations[currentLang];
 
+        // 조건에 맞는 대여소가 하나도 없을 경우 처리
         if (stations.length === 0) {
             listContainer.innerHTML = `<div class="status-message">${t.noResults}</div>`;
             return;
         }
 
+        // DOM 조작 성능 최적화를 위한 DocumentFragment 객체 생성
         const fragment = document.createDocumentFragment();
+        // 렌더링 과부하 방지를 위해 최대 상위 150개까지만 잘라서 렌더링
         const limit = Math.min(stations.length, 150);
 
+        // 제한된 개수만큼 반복문을 돌며 HTML 구조 생성
         for (let i = 0; i < limit; i++) {
             const station = stations[i];
+            // 대여소 이름
             const name = station.stationName; 
+            // 대여 가능 자전거 수 (정수로 파싱)
             const availableBikes = parseInt(station.parkingBikeTotCnt, 10);
+            // 자전거가 0개인지 여부 확인
             const isEmpty = availableBikes === 0;
             
+            // 거리를 소수점 둘째 자리까지 표현하는 텍스트로 생성
             const distText = `${station.distance.toFixed(2)}km`;
 
+            // 개별 대여소 li 엘리먼트 생성
             const li = document.createElement('li');
+            // 클래스 부여
             li.className = 'bike-item';
+            // 내부에 들어갈 HTML 구조 작성
             li.innerHTML = `
                 <div class="station-info">
                     <div class="station-name">${name}</div>
@@ -725,32 +1060,38 @@
                         <span>${t.distLabel(distText)}</span>
                     </div>
                 </div>
+                <!-- 0개일 경우 empty 클래스를 추가하여 빨간색으로 스타일 변경 -->
                 <div class="bike-count-box ${isEmpty ? 'empty' : ''}">
                     <div class="count-label">${t.availableLabel}</div>
                     <div class="count-number">${availableBikes}</div>
                 </div>
             `;
+            // 가상 조각(fragment)에 노드 추가
             fragment.appendChild(li);
         }
 
+        // 완성된 가상 조각 전체를 한 번에 실제 ul 목록에 추가하여 화면에 표시
         listContainer.appendChild(fragment);
     }
 
-    // 검색어 입력 이벤트 (실시간 필터링)
+    // 대여소 실시간 검색창에 글자를 입력할 때마다 즉시 리스트를 필터링하는 이벤트 리스너
     document.getElementById('searchInput').addEventListener('input', function() {
         updateAndRender();
     });
 
+    // 검색창에서 엔터(Enter)키를 쳤을 때 키보드를 닫아주는 처리
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            this.blur();
+            this.blur(); // 포커스 해제하여 모바일 키보드 내림
         }
     });
 
+    // 기준 입력창에 입력 시작 시 기존 위치 검색 에러 문구를 숨김
     document.getElementById('locationInput').addEventListener('input', function() {
         document.getElementById('locationError').style.display = 'none';
     });
 
+    // 기준 입력창에서 엔터키 입력 시 위치 검색 실행 및 키보드 내림 처리
     document.getElementById('locationInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             searchLocationQuiet();
@@ -758,7 +1099,7 @@
         }
     });
 
-    // 앱 실행 시 데이터 로드
+    // 웹 페이지 로딩 완료 시 자동으로 실시간 따릉이 데이터 호출 시작
     window.onload = fetchBikeData;
 
 </script>
